@@ -32,7 +32,7 @@ html {
   border-bottom: 0.07rem solid rgba(0, 0, 0, 0.3);
 }
 .piece.king {
-  background-image: url("/crown.svg");
+  background-image: url("crown.svg");
   background-repeat: no-repeat;
   background-position: 52% center;
   background-size: 60%;
