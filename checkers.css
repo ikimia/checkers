@@ -1,6 +1,7 @@
 body {
   margin: 0;
   padding: 0;
+  background-color: #69452c;
 }
 html {
   font-size: 8vw;
@@ -9,10 +10,6 @@ html {
   html {
     font-size: 8vh;
   }
-}
-body {
-  margin: 0;
-  background-color: #69452c;
 }
 #container {
   display: flex;
