@@ -1,10 +1,11 @@
 let activePiece = null;
 let prevSquare = null;
 let capturedSquare = null;
-let prevActive = null;
-let prevCaptured = false;
 let dx = 0;
 let dy = 0;
+
+let prevActive = null;
+let prevCaptured = false;
 
 const observed = (onUpdate) => ({
   _value: null,
@@ -99,7 +100,7 @@ document.addEventListener("pointerup", (e) => {
   if (targetSquare._value) {
     targetSquare._value.appendChild(activePiece);
     if (capturedSquare) {
-      capturedSquare.removeChild(capturedSquare.firstElementChild);
+      capturedSquare.firstElementChild.remove();
       prevCaptured = true;
     } else {
       prevCaptured = false;
@@ -116,6 +117,8 @@ document.addEventListener("pointerup", (e) => {
   Object.assign(activePiece.style, { position: null, pointerEvents: null });
   activePiece = null;
   prevSquare = null;
+  dx = 0;
+  dy = 0;
   hoveredSquare.update(null);
 });
 
@@ -149,6 +152,16 @@ const squares = Array.from({ length: 64 }, (_, i) =>
 const droppables = squares.filter(
   (s) => (getColumn(s) + (getRow(s) % 2)) % 2 === 1
 );
-droppables.slice(0, 12).forEach(addPiece("p1"));
-droppables.slice(-12).forEach(addPiece("p2"));
 document.getElementById("board").append(...squares);
+
+function startGame() {
+  droppables.forEach((s) => s.firstElementChild?.remove());
+  droppables.slice(0, 12).forEach(addPiece("p1"));
+  droppables.slice(-12).forEach(addPiece("p2"));
+  prevActive = null;
+  prevCaptured = false;
+}
+
+startGame();
+
+document.getElementById("newGame").addEventListener("click", startGame);
