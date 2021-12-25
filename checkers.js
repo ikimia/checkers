@@ -1,6 +1,8 @@
 let activePiece = null;
 let prevSquare = null;
 let capturedSquare = null;
+let prevActive = null;
+let prevCaptured = false;
 let dx = 0;
 let dy = 0;
 
@@ -51,6 +53,11 @@ const targetSquare = observed((prev, updated) => {
   updated?.classList.add("target");
 });
 
+const isChangedPlayer = () =>
+  !prevActive || getPlayer(prevActive) !== getPlayer(activePiece);
+
+const isInMultiCapture = () => prevCaptured && prevActive === activePiece;
+
 const hoveredSquare = observed((_, square) => {
   targetSquare.update(null);
   capturedSquare = null;
@@ -58,6 +65,7 @@ const hoveredSquare = observed((_, square) => {
   if (!activePiece) return;
   if (square.childElementCount > 0) return;
   if (assertDiff(activePiece, square, 1)) {
+    if (!isChangedPlayer()) return;
     targetSquare.update(square);
     return;
   }
@@ -67,6 +75,7 @@ const hoveredSquare = observed((_, square) => {
       middleSquare.childElementCount > 0 &&
       getPlayer(middleSquare.firstElementChild) !== getPlayer(activePiece)
     ) {
+      if (!isChangedPlayer() && !isInMultiCapture()) return;
       capturedSquare = middleSquare;
       targetSquare.update(square);
     }
@@ -91,12 +100,16 @@ document.addEventListener("pointerup", (e) => {
     targetSquare._value.appendChild(activePiece);
     if (capturedSquare) {
       capturedSquare.removeChild(capturedSquare.firstElementChild);
+      prevCaptured = true;
+    } else {
+      prevCaptured = false;
     }
     const row = getRow(targetSquare._value);
     const player = getPlayer(activePiece);
     if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
       activePiece.classList.add("king");
     }
+    prevActive = activePiece;
   } else {
     prevSquare.appendChild(activePiece);
   }
