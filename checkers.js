@@ -1,8 +1,8 @@
+import dragAndDrop from "./drag.js";
+
 let activePiece = null;
 let prevSquare = null;
 let capturedSquare = null;
-let dx = 0;
-let dy = 0;
 
 let prevActive = null;
 let prevCaptured = false;
@@ -15,8 +15,6 @@ const observed = (onUpdate) => ({
     this._value = value;
   },
 });
-
-const isMobile = !!navigator.maxTouchPoints;
 
 const newDiv = (className, data) => {
   const div = document.createElement("div");
@@ -83,66 +81,44 @@ const hoveredSquare = observed((_, square) => {
   }
 });
 
-document.addEventListener(isMobile ? "touchmove" : "pointermove", (e) => {
-  if (!activePiece) return;
-  e.preventDefault();
-  Object.assign(activePiece.style, {
-    top: `${e.pageY - dy + document.body.scrollTop}px`,
-    left: `${e.pageX - dx + document.body.scrollLeft}px`,
-  });
-  const { clientX, clientY } = isMobile ? e.touches[0] : e;
-  hoveredSquare.update(document.elementFromPoint(clientX, clientY));
-});
-
-document.addEventListener("pointerup", (e) => {
-  e.preventDefault();
-  if (!activePiece) return;
-  if (targetSquare._value) {
-    targetSquare._value.appendChild(activePiece);
-    if (capturedSquare) {
-      capturedSquare.firstElementChild.remove();
-      prevCaptured = true;
+const assignDragListener = dragAndDrop(
+  (element) => {
+    activePiece = element;
+    prevSquare = element.parentNode;
+    document.body.appendChild(activePiece);
+  },
+  () => {
+    if (!activePiece) return;
+    if (targetSquare._value) {
+      targetSquare._value.appendChild(activePiece);
+      if (capturedSquare) {
+        capturedSquare.firstElementChild.remove();
+        prevCaptured = true;
+      } else {
+        prevCaptured = false;
+      }
+      const row = getRow(targetSquare._value);
+      const player = getPlayer(activePiece);
+      if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
+        activePiece.classList.add("king");
+      }
+      prevActive = activePiece;
     } else {
-      prevCaptured = false;
+      prevSquare.appendChild(activePiece);
     }
-    const row = getRow(targetSquare._value);
-    const player = getPlayer(activePiece);
-    if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
-      activePiece.classList.add("king");
-    }
-    prevActive = activePiece;
-  } else {
-    prevSquare.appendChild(activePiece);
+    Object.assign(activePiece.style, { position: null, pointerEvents: null });
+    activePiece = null;
+    prevSquare = null;
+    hoveredSquare.update(null);
+  },
+  (clientX, clientY) => {
+    hoveredSquare.update(document.elementFromPoint(clientX, clientY));
   }
-  Object.assign(activePiece.style, { position: null, pointerEvents: null });
-  activePiece = null;
-  prevSquare = null;
-  dx = 0;
-  dy = 0;
-  hoveredSquare.update(null);
-});
-
-const onSelectPiece = (e) => {
-  e.preventDefault();
-  activePiece = e.currentTarget;
-  prevSquare = activePiece.parentNode;
-  dx = e.pageX - activePiece.offsetLeft;
-  dy = e.pageY - activePiece.offsetTop;
-  Object.assign(activePiece.style, {
-    position: "absolute",
-    top: `${activePiece.offsetTop + document.body.scrollTop}px`,
-    left: `${activePiece.offsetLeft + document.body.scrollLeft}px`,
-    pointerEvents: "none",
-  });
-  document.body.appendChild(activePiece);
-};
+);
 
 const addPiece = (player) => (square) => {
   const piece = newDiv("piece", { player });
-  piece.addEventListener(
-    isMobile ? "touchstart" : "pointerdown",
-    onSelectPiece
-  );
+  assignDragListener(piece);
   square.appendChild(piece);
 };
 
