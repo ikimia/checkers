@@ -37,10 +37,10 @@ html {
   background-position: 52% center;
   background-size: 60%;
 }
-.piece[data-player="p1"] {
+.piece.p1 {
   background-color: #770f05;
 }
-.piece[data-player="p2"] {
+.piece.p2 {
   background-color: #25282d;
 }
 #board {

@@ -16,20 +16,14 @@ const observed = (onUpdate) => ({
   },
 });
 
-const newDiv = (className, data) => {
-  const div = document.createElement("div");
-  div.className = className;
-  Object.entries(data ?? {}).forEach(([name, value]) => {
-    div.setAttribute(`data-${name}`, value);
-  });
-  return div;
-};
+const newDiv = (id, className) =>
+  Object.assign(document.createElement("div"), { id, className });
 
 const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-const getRow = (square) => +square.dataset.row;
-const getColumn = (square) => +square.dataset.column;
-const getPlayer = (piece) => piece.dataset.player;
+const getRow = (square) => +square.id.substring(1, square.id.indexOf(","));
+const getColumn = (square) => +square.id.substring(square.id.indexOf(",") + 1);
+const getPlayer = (piece) => piece.id.substring(0, 2);
 
 const getRowDiff = (piece, square) => {
   const diff = getRow(square) - getRow(prevSquare);
@@ -45,8 +39,7 @@ const assertDiff = (piece, square, expected) =>
 const getMiddleSquare = (square) => {
   const row = (getRow(prevSquare) + getRow(square)) / 2;
   const column = (getColumn(prevSquare) + getColumn(square)) / 2;
-  const selector = `.square[data-row="${row}"][data-column="${column}"]`;
-  return document.querySelector(selector);
+  return document.getElementById(`s${row},${column}`);
 };
 
 const targetSquare = observed((prev, updated) => {
@@ -115,9 +108,8 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
     if (prevActive && getPlayer(prevActive) === "p2") {
       const moves = getPossibleMoves("p1");
       const source = getRandom(Object.keys(moves));
-      const dest = getRandom(moves[source]);
+      const square = getRandom(moves[source]);
       const piece = droppables[source].firstElementChild;
-      const square = droppables[dest];
       simulateDragAndDrop(
         piece,
         piece.offsetLeft + piece.offsetWidth / 2,
@@ -132,14 +124,12 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
   }
 );
 
-const addPiece = (player) => (square) => {
-  const piece = newDiv("piece", { player });
-  assignDragListener(piece);
-  square.appendChild(piece);
+const addPiece = (player) => (square, i) => {
+  square.appendChild(newDiv(`${player}-${i}`, `piece ${player}`));
 };
 
 const squares = Array.from({ length: 64 }, (_, i) =>
-  newDiv("square", { row: Math.floor(i / 8), column: i % 8 })
+  newDiv(`s${Math.floor(i / 8)},${i % 8}`, "square")
 );
 const droppables = squares.filter(
   (s) => (getColumn(s) + (getRow(s) % 2)) % 2 === 1
@@ -150,30 +140,48 @@ function startGame() {
   droppables.forEach((s) => s.firstElementChild?.remove());
   droppables.slice(0, 12).forEach(addPiece("p1"));
   droppables.slice(-12).forEach(addPiece("p2"));
+  droppables
+    .filter((s) => s.childElementCount)
+    .map((s) => s.firstElementChild)
+    .forEach(assignDragListener);
   prevActive = null;
   prevCaptured = false;
 }
 
-const capturingSteps = { 3: 7, 4: 7, 5: 9 };
-const addPossibleMove = (moves, p, i, step) => {
-  const nextSpot = i + step;
-  if (!droppables[nextSpot]) return;
-  if (!droppables[nextSpot].childElementCount) {
-    moves[i] = moves[i] ?? [];
-    moves[i].push(nextSpot);
-    return;
+const isOnBoard = (n) => n >= 0 && n < 8;
+const addPossibleMoves = (moves, piece, i) => {
+  const p = getPlayer(piece);
+  const row = getRow(droppables[i]);
+  const column = getColumn(droppables[i]);
+  const rDirections = p === "p1" ? [1] : [-1];
+  if (piece.classList.contains("king")) {
+    rDirections.push(rDirections[0] * -1);
   }
-  if (getPlayer(droppables[nextSpot].firstElementChild) === p) return;
-  const capturingStep = Math.sign(step) * capturingSteps[Math.abs(step)];
-  const capturingSpot = i + capturingStep;
-  if (
-    droppables[capturingSpot] &&
-    !droppables[capturingSpot].childElementCount &&
-    Math.floor(capturingSpot / 4) === Math.floor(i / 4) + 2 * Math.sign(step)
-  ) {
-    moves[i] = moves[i] ?? [];
-    moves[i].push(capturingSpot);
-  }
+  rDirections.forEach((rDirection) => {
+    const nextRow = row + rDirection;
+    if (!isOnBoard(nextRow)) return;
+    [-1, +1].forEach((cDirection) => {
+      const nextColumn = column + cDirection;
+      if (!isOnBoard(nextColumn)) return;
+      const nextSpot = document.getElementById(`s${nextRow},${nextColumn}`);
+      if (!nextSpot.childElementCount) {
+        moves[i] = moves[i] ?? [];
+        moves[i].push(nextSpot);
+        return;
+      }
+      if (getPlayer(nextSpot.firstElementChild) === p) return;
+      const capturingRow = row + rDirection * 2;
+      const capturingColumn = column + cDirection * 2;
+      if (!isOnBoard(capturingRow) || !isOnBoard(capturingColumn)) return;
+      const capturingSpot = document.getElementById(
+        `s${capturingRow},${capturingColumn}`
+      );
+      if (!capturingSpot.childElementCount) {
+        moves[i] = moves[i] ?? [];
+        moves[i].push(capturingSpot);
+      }
+    });
+  });
 };
 
 function getPossibleMoves(player) {
@@ -182,11 +190,7 @@ function getPossibleMoves(player) {
     if (!d.childElementCount) return;
     const p = getPlayer(d.firstElementChild);
     if (p !== player) return;
-    const isP1 = p === "p1";
-    addPossibleMove(moves, p, i, isP1 ? 4 : -4);
-    const rowMod = Math.floor(i / 4) % 2;
-    if ((i % 4) + 3 * rowMod === 3) return;
-    addPossibleMove(moves, p, i, isP1 ? 5 - rowMod * 2 : -3 - rowMod * 2);
+    addPossibleMoves(moves, d.firstElementChild, i);
   });
   return moves;
 }
