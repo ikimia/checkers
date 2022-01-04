@@ -25,6 +25,8 @@ const newDiv = (className, data) => {
   return div;
 };
 
+const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
 const getRow = (square) => +square.dataset.row;
 const getColumn = (square) => +square.dataset.column;
 const getPlayer = (piece) => piece.dataset.player;
@@ -81,7 +83,7 @@ const hoveredSquare = observed((_, square) => {
   }
 });
 
-const assignDragListener = dragAndDrop(
+const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
   (element) => {
     activePiece = element;
     prevSquare = element.parentNode;
@@ -110,6 +112,20 @@ const assignDragListener = dragAndDrop(
     activePiece = null;
     prevSquare = null;
     hoveredSquare.update(null);
+    if (prevActive && getPlayer(prevActive) === "p2") {
+      const moves = getPossibleMoves("p1");
+      const source = getRandom(Object.keys(moves));
+      const dest = getRandom(moves[source]);
+      const piece = droppables[source].firstElementChild;
+      const square = droppables[dest];
+      simulateDragAndDrop(
+        piece,
+        piece.offsetLeft + piece.offsetWidth / 2,
+        piece.offsetTop + piece.offsetHeight / 2,
+        square.offsetLeft + square.offsetWidth / 2,
+        square.offsetTop + square.offsetHeight / 2
+      );
+    }
   },
   (clientX, clientY) => {
     hoveredSquare.update(document.elementFromPoint(clientX, clientY));
@@ -136,6 +152,43 @@ function startGame() {
   droppables.slice(-12).forEach(addPiece("p2"));
   prevActive = null;
   prevCaptured = false;
+}
+
+const capturingSteps = { 3: 7, 4: 7, 5: 9 };
+const addPossibleMove = (moves, p, i, step) => {
+  const nextSpot = i + step;
+  if (!droppables[nextSpot]) return;
+  if (!droppables[nextSpot].childElementCount) {
+    moves[i] = moves[i] ?? [];
+    moves[i].push(nextSpot);
+    return;
+  }
+  if (getPlayer(droppables[nextSpot].firstElementChild) === p) return;
+  const capturingStep = Math.sign(step) * capturingSteps[Math.abs(step)];
+  const capturingSpot = i + capturingStep;
+  if (
+    droppables[capturingSpot] &&
+    !droppables[capturingSpot].childElementCount &&
+    Math.floor(capturingSpot / 4) === Math.floor(i / 4) + 2 * Math.sign(step)
+  ) {
+    moves[i] = moves[i] ?? [];
+    moves[i].push(capturingSpot);
+  }
+};
+
+function getPossibleMoves(player) {
+  const moves = {};
+  droppables.forEach((d, i) => {
+    if (!d.childElementCount) return;
+    const p = getPlayer(d.firstElementChild);
+    if (p !== player) return;
+    const isP1 = p === "p1";
+    addPossibleMove(moves, p, i, isP1 ? 4 : -4);
+    const rowMod = Math.floor(i / 4) % 2;
+    if ((i % 4) + 3 * rowMod === 3) return;
+    addPossibleMove(moves, p, i, isP1 ? 5 - rowMod * 2 : -3 - rowMod * 2);
+  });
+  return moves;
 }
 
 startGame();
