@@ -106,10 +106,7 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
     prevSquare = null;
     hoveredSquare.update(null);
     if (prevActive && getPlayer(prevActive) === "p2") {
-      const moves = getPossibleMoves("p1");
-      const source = getRandom(Object.keys(moves));
-      const square = getRandom(moves[source]);
-      const piece = droppables[source].firstElementChild;
+      const [piece, square] = getRandom(getPossibleMoves("p1"));
       simulateDragAndDrop(
         piece,
         piece.offsetLeft + piece.offsetWidth / 2,
@@ -124,73 +121,64 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
   }
 );
 
-const addPiece = (player) => (square, i) => {
-  square.appendChild(newDiv(`${player}-${i}`, `piece ${player}`));
-};
+const board = document.getElementById("board");
 
-const squares = Array.from({ length: 64 }, (_, i) =>
-  newDiv(`s${Math.floor(i / 8)},${i % 8}`, "square")
-);
-const droppables = squares.filter(
-  (s) => (getColumn(s) + (getRow(s) % 2)) % 2 === 1
-);
-document.getElementById("board").append(...squares);
+for (let row = 0; row < 8; row++) {
+  for (let column = 0; column < 8; column++) {
+    board.appendChild(newDiv(`s${row},${column}`, "square"));
+  }
+}
+
+const isOnBoard = (n) => n >= 0 && n < 8;
+function getSquare(row, column) {
+  if (!isOnBoard(row) || !isOnBoard(column)) return null;
+  return board.children[row * 8 + column];
+}
+
+function forEachSquare(fromRow, toRow, fn) {
+  let i = 0;
+  for (let row = fromRow; row < toRow; row++) {
+    for (let col = 1 - (row % 2); col < 8; col += 2) {
+      fn(getSquare(row, col), i++);
+    }
+  }
+}
+
+function newPiece(player, i) {
+  const piece = newDiv(`${player}-${i}`, `piece ${player}`);
+  assignDragListener(piece);
+  return piece;
+}
 
 function startGame() {
-  droppables.forEach((s) => s.firstElementChild?.remove());
-  droppables.slice(0, 12).forEach(addPiece("p1"));
-  droppables.slice(-12).forEach(addPiece("p2"));
-  droppables
-    .filter((s) => s.childElementCount)
-    .map((s) => s.firstElementChild)
-    .forEach(assignDragListener);
+  document.querySelectorAll(".piece").forEach((p) => p.remove());
+  forEachSquare(0, 3, (square, i) => square.appendChild(newPiece("p1", i++)));
+  forEachSquare(5, 8, (square, i) => square.appendChild(newPiece("p2", i++)));
   prevActive = null;
   prevCaptured = false;
 }
 
-const isOnBoard = (n) => n >= 0 && n < 8;
-const addPossibleMoves = (moves, piece, i) => {
-  const p = getPlayer(piece);
-  const row = getRow(droppables[i]);
-  const column = getColumn(droppables[i]);
-  const rDirections = p === "p1" ? [1] : [-1];
-  if (piece.classList.contains("king")) {
-    rDirections.push(rDirections[0] * -1);
-  }
-  rDirections.forEach((rDirection) => {
-    const nextRow = row + rDirection;
-    if (!isOnBoard(nextRow)) return;
-    [-1, +1].forEach((cDirection) => {
-      const nextColumn = column + cDirection;
-      if (!isOnBoard(nextColumn)) return;
-      const nextSpot = document.getElementById(`s${nextRow},${nextColumn}`);
-      if (!nextSpot.childElementCount) {
-        moves[i] = moves[i] ?? [];
-        moves[i].push(nextSpot);
-        return;
-      }
-      if (getPlayer(nextSpot.firstElementChild) === p) return;
-      const capturingRow = row + rDirection * 2;
-      const capturingColumn = column + cDirection * 2;
-      if (!isOnBoard(capturingRow) || !isOnBoard(capturingColumn)) return;
-      const capturingSpot = document.getElementById(
-        `s${capturingRow},${capturingColumn}`
-      );
-      if (!capturingSpot.childElementCount) {
-        moves[i] = moves[i] ?? [];
-        moves[i].push(capturingSpot);
-      }
-    });
-  });
-};
-
 function getPossibleMoves(player) {
-  const moves = {};
-  droppables.forEach((d, i) => {
-    if (!d.childElementCount) return;
-    const p = getPlayer(d.firstElementChild);
-    if (p !== player) return;
-    addPossibleMoves(moves, d.firstElementChild, i);
+  const moves = [];
+  document.querySelectorAll(`.piece.${player}`).forEach((piece) => {
+    const p = getPlayer(piece);
+    const row = getRow(piece.parentElement);
+    const column = getColumn(piece.parentElement);
+    const rdirs = [p === "p1" ? 1 : -1];
+    if (piece.classList.contains("king")) rdirs.push(rdirs[0] * -1);
+    rdirs.forEach((rdir) => {
+      [-1, +1].forEach((cdir) => {
+        const nextSquare = getSquare(row + rdir, column + cdir);
+        if (!nextSquare) return;
+        if (!nextSquare.childElementCount) moves.push([piece, nextSquare]);
+        const nextPiece = nextSquare.firstElementChild;
+        if (!nextPiece || getPlayer(nextPiece) === p) return;
+        const capturingSquare = getSquare(row + rdir * 2, column + cdir * 2);
+        if (!capturingSquare) return;
+        if (!capturingSquare.childElementCount)
+          moves.push([piece, capturingSquare]);
+      });
+    });
   });
   return moves;
 }
