@@ -1,11 +1,11 @@
 import dragAndDrop from "./drag.js";
 
+let currentTurnMoves = null;
+let currentPlayer = null;
+
 let activePiece = null;
 let prevSquare = null;
 let capturedSquare = null;
-
-let prevActive = null;
-let prevCaptured = false;
 
 const observed = (onUpdate) => ({
   _value: null,
@@ -25,54 +25,21 @@ const getRow = (square) => +square.id.substring(1, square.id.indexOf(","));
 const getColumn = (square) => +square.id.substring(square.id.indexOf(",") + 1);
 const getPlayer = (piece) => piece.id.substring(0, 2);
 
-const getRowDiff = (piece, square) => {
-  const diff = getRow(square) - getRow(prevSquare);
-  if (piece.classList.contains("king")) return Math.abs(diff);
-  if (getPlayer(piece) === "p1") return diff;
-  return diff * -1;
-};
-
-const assertDiff = (piece, square, expected) =>
-  getRowDiff(piece, square) === expected &&
-  Math.abs(getColumn(prevSquare) - getColumn(square)) === expected;
-
-const getMiddleSquare = (square) => {
-  const row = (getRow(prevSquare) + getRow(square)) / 2;
-  const column = (getColumn(prevSquare) + getColumn(square)) / 2;
-  return document.getElementById(`s${row},${column}`);
-};
-
 const targetSquare = observed((prev, updated) => {
   prev?.classList.remove("target");
   updated?.classList.add("target");
 });
-
-const isChangedPlayer = () =>
-  !prevActive || getPlayer(prevActive) !== getPlayer(activePiece);
-
-const isInMultiCapture = () => prevCaptured && prevActive === activePiece;
 
 const hoveredSquare = observed((_, square) => {
   targetSquare.update(null);
   capturedSquare = null;
   if (!square?.classList.contains("square")) return;
   if (!activePiece) return;
-  if (square.childElementCount > 0) return;
-  if (assertDiff(activePiece, square, 1)) {
-    if (!isChangedPlayer()) return;
-    targetSquare.update(square);
-    return;
-  }
-  if (assertDiff(activePiece, square, 2)) {
-    const middleSquare = getMiddleSquare(square);
-    if (
-      middleSquare.childElementCount > 0 &&
-      getPlayer(middleSquare.firstElementChild) !== getPlayer(activePiece)
-    ) {
-      if (!isChangedPlayer() && !isInMultiCapture()) return;
-      capturedSquare = middleSquare;
-      targetSquare.update(square);
-    }
+  const move = currentTurnMoves[`${activePiece.id}-${square.id}`];
+  if (!move) return;
+  targetSquare.update(square);
+  if (move.capturedSquare) {
+    capturedSquare = move.capturedSquare;
   }
 });
 
@@ -88,16 +55,15 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
       targetSquare._value.appendChild(activePiece);
       if (capturedSquare) {
         capturedSquare.firstElementChild.remove();
-        prevCaptured = true;
-      } else {
-        prevCaptured = false;
       }
       const row = getRow(targetSquare._value);
       const player = getPlayer(activePiece);
       if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
         activePiece.classList.add("king");
       }
-      prevActive = activePiece;
+      setTimeout(() => {
+        startTurn(currentPlayer === "p1" ? "p2" : "p1");
+      }, 0);
     } else {
       prevSquare.appendChild(activePiece);
     }
@@ -105,16 +71,6 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
     activePiece = null;
     prevSquare = null;
     hoveredSquare.update(null);
-    if (prevActive && getPlayer(prevActive) === "p2") {
-      const [piece, square] = getRandom(getPossibleMoves("p1"));
-      simulateDragAndDrop(
-        piece,
-        piece.offsetLeft + piece.offsetWidth / 2,
-        piece.offsetTop + piece.offsetHeight / 2,
-        square.offsetLeft + square.offsetWidth / 2,
-        square.offsetTop + square.offsetHeight / 2
-      );
-    }
   },
   (clientX, clientY) => {
     hoveredSquare.update(document.elementFromPoint(clientX, clientY));
@@ -150,12 +106,29 @@ function newPiece(player, i) {
   return piece;
 }
 
+function startTurn(player) {
+  currentPlayer = player;
+  const possibleMoves = getPossibleMoves(player);
+  currentTurnMoves = Object.fromEntries(
+    possibleMoves.map((move) => [`${move.piece.id}-${move.square.id}`, move])
+  );
+  if (player === "p1") {
+    const { piece, square } = getRandom(possibleMoves);
+    simulateDragAndDrop(
+      piece,
+      piece.offsetLeft + piece.offsetWidth / 2,
+      piece.offsetTop + piece.offsetHeight / 2,
+      square.offsetLeft + square.offsetWidth / 2,
+      square.offsetTop + square.offsetHeight / 2
+    );
+  }
+}
+
 function startGame() {
   document.querySelectorAll(".piece").forEach((p) => p.remove());
   forEachSquare(0, 3, (square, i) => square.appendChild(newPiece("p1", i++)));
   forEachSquare(5, 8, (square, i) => square.appendChild(newPiece("p2", i++)));
-  prevActive = null;
-  prevCaptured = false;
+  startTurn("p2");
 }
 
 function getPossibleMoves(player) {
@@ -170,13 +143,20 @@ function getPossibleMoves(player) {
       [-1, +1].forEach((cdir) => {
         const nextSquare = getSquare(row + rdir, column + cdir);
         if (!nextSquare) return;
-        if (!nextSquare.childElementCount) moves.push([piece, nextSquare]);
+        if (!nextSquare.childElementCount) {
+          moves.push({ piece, square: nextSquare });
+        }
         const nextPiece = nextSquare.firstElementChild;
         if (!nextPiece || getPlayer(nextPiece) === p) return;
         const capturingSquare = getSquare(row + rdir * 2, column + cdir * 2);
         if (!capturingSquare) return;
-        if (!capturingSquare.childElementCount)
-          moves.push([piece, capturingSquare]);
+        if (!capturingSquare.childElementCount) {
+          moves.push({
+            piece,
+            square: capturingSquare,
+            capturedSquare: nextSquare,
+          });
+        }
       });
     });
   });
