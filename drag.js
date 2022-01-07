@@ -7,6 +7,7 @@ function dragAndDrop(onDrag, onDrop) {
   let inSimulation = false;
   let source = null;
   let target = null;
+  let lastHovered = null;
 
   const pick = (el, x, y) => {
     element = el;
@@ -33,11 +34,13 @@ function dragAndDrop(onDrag, onDrop) {
       top: `${clientY - dy + document.body.scrollTop}px`,
       left: `${clientX - dx + document.body.scrollLeft}px`,
     });
+    const hovered = document.elementFromPoint(clientX, clientY);
+    if (hovered === lastHovered) return;
+    lastHovered = hovered;
     target?.classList.remove("target");
     target = null;
-    const potentialTarget = document.elementFromPoint(clientX, clientY);
-    if (!potentialTarget.classList.contains("droppable")) return;
-    target = potentialTarget;
+    if (!hovered.classList.contains("droppable")) return;
+    target = hovered;
     target.classList.add("target");
   };
   document.addEventListener(isMobile ? "touchmove" : "pointermove", (e) => {
