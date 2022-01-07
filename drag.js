@@ -1,7 +1,4 @@
-const getXY = (e) => {
-  const { clientX, clientY } = e;
-  return [clientX, clientY];
-};
+const getXY = ({ clientX, clientY }) => [clientX, clientY];
 const getCenter = (el) => [
   el.offsetLeft + el.offsetWidth / 2 - document.documentElement.scrollLeft,
   el.offsetTop + el.offsetHeight / 2 - document.documentElement.scrollTop,
