@@ -1,6 +1,6 @@
 const isMobile = !!navigator.maxTouchPoints;
 
-function dragAndDrop(onDrag, onDrop) {
+function dragAndDrop(onPick, onDrop) {
   let dx = 0;
   let dy = 0;
   let element = null;
@@ -21,7 +21,7 @@ function dragAndDrop(onDrag, onDrop) {
     });
     source = element.parentNode;
     document.body.appendChild(element);
-    onDrag(element);
+    onPick(element);
   };
   const dragListener = (e) => {
     if (inSimulation) return;
@@ -54,9 +54,9 @@ function dragAndDrop(onDrag, onDrop) {
     const dropIn = target ?? source;
     dropIn.appendChild(element);
     Object.assign(element.style, { position: null, pointerEvents: null });
-    source = null;
     target?.classList.remove("target");
     onDrop(element, dropIn === target, target);
+    source = null;
     target = null;
     element = null;
   };
