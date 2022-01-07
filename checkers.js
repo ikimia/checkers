@@ -77,13 +77,7 @@ function startTurn(player) {
     const randomMove = getRandom(possibleMoves);
     if (!randomMove) return;
     const { piece, square } = randomMove;
-    simulateDragAndDrop(
-      piece,
-      piece.offsetLeft + piece.offsetWidth / 2,
-      piece.offsetTop + piece.offsetHeight / 2,
-      square.offsetLeft + square.offsetWidth / 2,
-      square.offsetTop + square.offsetHeight / 2
-    );
+    simulateDragAndDrop(piece, square);
   }
 }
 

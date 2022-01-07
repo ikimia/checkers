@@ -1,4 +1,11 @@
-const isMobile = !!navigator.maxTouchPoints;
+const getXY = (e) => {
+  const { clientX, clientY } = e;
+  return [clientX, clientY];
+};
+const getCenter = (el) => [
+  el.offsetLeft + el.offsetWidth / 2 - document.documentElement.scrollLeft,
+  el.offsetTop + el.offsetHeight / 2 - document.documentElement.scrollTop,
+];
 
 function dragAndDrop(onPick, onDrop) {
   let dx = 0;
@@ -11,30 +18,30 @@ function dragAndDrop(onPick, onDrop) {
 
   const pick = (el, x, y) => {
     element = el;
-    dx = x - element.offsetLeft;
-    dy = y - element.offsetTop;
+    dx = x - el.offsetLeft;
+    dy = y - el.offsetTop;
     Object.assign(element.style, {
       position: "absolute",
-      top: `${element.offsetTop + document.body.scrollTop}px`,
-      left: `${element.offsetLeft + document.body.scrollLeft}px`,
+      top: `${y - dy}px`,
+      left: `${x - dx}px`,
       pointerEvents: "none",
     });
     source = element.parentNode;
     document.body.appendChild(element);
     onPick(element);
   };
-  const dragListener = (e) => {
+  const onPointerDown = (e) => {
     if (inSimulation) return;
     e.preventDefault();
-    pick(e.currentTarget, e.pageX, e.pageY);
+    pick(e.currentTarget, ...getXY(e));
   };
 
-  const moveTo = (clientX, clientY) => {
+  const moveTo = (x, y) => {
     Object.assign(element.style, {
-      top: `${clientY - dy + document.body.scrollTop}px`,
-      left: `${clientX - dx + document.body.scrollLeft}px`,
+      top: `${y - dy}px`,
+      left: `${x - dx}px`,
     });
-    const hovered = document.elementFromPoint(clientX, clientY);
+    const hovered = document.elementFromPoint(x, y);
     if (hovered === lastHovered) return;
     lastHovered = hovered;
     target?.classList.remove("target");
@@ -43,11 +50,10 @@ function dragAndDrop(onPick, onDrop) {
     target = hovered;
     target.classList.add("target");
   };
-  document.addEventListener(isMobile ? "touchmove" : "pointermove", (e) => {
+  document.addEventListener("pointermove", (e) => {
     if (!element || inSimulation) return;
     e.preventDefault();
-    const { clientX, clientY } = isMobile ? e.touches[0] : e;
-    moveTo(clientX, clientY);
+    moveTo(...getXY(e));
   });
 
   const drop = () => {
@@ -68,14 +74,13 @@ function dragAndDrop(onPick, onDrop) {
 
   return {
     assignDragListener(element) {
-      element.addEventListener(
-        isMobile ? "touchstart" : "pointerdown",
-        dragListener
-      );
+      element.addEventListener("pointerdown", onPointerDown);
     },
-    simulateDragAndDrop(element, fromX, fromY, toX, toY) {
+    simulateDragAndDrop(element, target) {
       inSimulation = true;
       new Promise((resolve) => setTimeout(resolve, 250)).then(() => {
+        const [fromX, fromY] = getCenter(element);
+        const [toX, toY] = getCenter(target);
         pick(element, fromX, fromY);
         const xStep = (toX - fromX) / 30;
         const yStep = (toY - fromY) / 30;
