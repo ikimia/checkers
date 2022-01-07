@@ -74,7 +74,9 @@ function startTurn(player) {
     currentTurnMoves[move.piece.id][move.square.id] = move;
   });
   if (player === "p1") {
-    const { piece, square } = getRandom(possibleMoves);
+    const randomMove = getRandom(possibleMoves);
+    if (!randomMove) return;
+    const { piece, square } = randomMove;
     simulateDragAndDrop(
       piece,
       piece.offsetLeft + piece.offsetWidth / 2,
