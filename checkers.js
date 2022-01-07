@@ -24,9 +24,7 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
     });
     if (!droppedInTarget) return;
     const { capturedSquare } = currentTurnMoves[element.id][targetSquare.id];
-    if (capturedSquare) {
-      capturedSquare.firstElementChild.remove();
-    }
+    capturedSquare?.firstElementChild.remove();
     const row = getRow(targetSquare);
     const player = getPlayer(element);
     if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
