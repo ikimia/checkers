@@ -14,14 +14,13 @@ const getPlayer = (piece) => piece.id.substring(0, 2);
 
 const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
   (element) => {
-    if (!currentTurnMoves[element.id]) return;
-    Object.values(currentTurnMoves[element.id]).forEach(({ square }) => {
-      square.classList.add("droppable");
+    Object.values(currentTurnMoves[element.id] ?? {}).forEach((move) => {
+      move.square.classList.add("droppable");
     });
   },
   (element, droppedInTarget, targetSquare) => {
-    Object.values(currentTurnMoves[element.id]).forEach(({ square }) => {
-      square.classList.remove("droppable");
+    Object.values(currentTurnMoves[element.id] ?? {}).forEach((move) => {
+      move.square.classList.remove("droppable");
     });
     if (!droppedInTarget) return;
     const { capturedSquare } = currentTurnMoves[element.id][targetSquare.id];
@@ -69,9 +68,10 @@ function newPiece(player, i) {
 function startTurn(player) {
   currentPlayer = player;
   const possibleMoves = getPossibleMoves(player);
-  currentTurnMoves = Object.fromEntries(
-    possibleMoves.map((move) => [move.piece.id, {}])
-  );
+  currentTurnMoves = {};
+  possibleMoves.forEach((move) => {
+    currentTurnMoves[move.piece.id] = {};
+  });
   possibleMoves.forEach((move) => {
     currentTurnMoves[move.piece.id][move.square.id] = move;
   });
