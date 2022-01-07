@@ -1,10 +1,12 @@
 const isMobile = !!navigator.maxTouchPoints;
 
-function dragAndDrop(onDrag, onDrop, onMove) {
+function dragAndDrop(onDrag, onDrop) {
   let dx = 0;
   let dy = 0;
   let element = null;
   let inSimulation = false;
+  let source = null;
+  let target = null;
 
   const pick = (el, x, y) => {
     element = el;
@@ -16,6 +18,8 @@ function dragAndDrop(onDrag, onDrop, onMove) {
       left: `${element.offsetLeft + document.body.scrollLeft}px`,
       pointerEvents: "none",
     });
+    source = element.parentNode;
+    document.body.appendChild(element);
     onDrag(element);
   };
   const dragListener = (e) => {
@@ -29,7 +33,12 @@ function dragAndDrop(onDrag, onDrop, onMove) {
       top: `${clientY - dy + document.body.scrollTop}px`,
       left: `${clientX - dx + document.body.scrollLeft}px`,
     });
-    onMove(clientX, clientY);
+    target?.classList.remove("target");
+    target = null;
+    const potentialTarget = document.elementFromPoint(clientX, clientY);
+    if (!potentialTarget.classList.contains("droppable")) return;
+    target = potentialTarget;
+    target.classList.add("target");
   };
   document.addEventListener(isMobile ? "touchmove" : "pointermove", (e) => {
     if (!element || inSimulation) return;
@@ -39,8 +48,14 @@ function dragAndDrop(onDrag, onDrop, onMove) {
   });
 
   const drop = () => {
+    const dropIn = target ?? source;
+    dropIn.appendChild(element);
+    Object.assign(element.style, { position: null, pointerEvents: null });
+    source = null;
+    target?.classList.remove("target");
+    onDrop(element, dropIn === target, target);
+    target = null;
     element = null;
-    onDrop();
   };
   document.addEventListener("pointerup", (e) => {
     if (!element || inSimulation) return;

@@ -3,19 +3,6 @@ import dragAndDrop from "./drag.js";
 let currentTurnMoves = null;
 let currentPlayer = null;
 
-let activePiece = null;
-let prevSquare = null;
-let capturedSquare = null;
-
-const observed = (onUpdate) => ({
-  _value: null,
-  update(value) {
-    if (value === this._value) return;
-    onUpdate(this._value, value);
-    this._value = value;
-  },
-});
-
 const newDiv = (id, className) =>
   Object.assign(document.createElement("div"), { id, className });
 
@@ -25,55 +12,28 @@ const getRow = (square) => +square.id.substring(1, square.id.indexOf(","));
 const getColumn = (square) => +square.id.substring(square.id.indexOf(",") + 1);
 const getPlayer = (piece) => piece.id.substring(0, 2);
 
-const targetSquare = observed((prev, updated) => {
-  prev?.classList.remove("target");
-  updated?.classList.add("target");
-});
-
-const hoveredSquare = observed((_, square) => {
-  targetSquare.update(null);
-  capturedSquare = null;
-  if (!square?.classList.contains("square")) return;
-  if (!activePiece) return;
-  const move = currentTurnMoves[`${activePiece.id}-${square.id}`];
-  if (!move) return;
-  targetSquare.update(square);
-  if (move.capturedSquare) {
-    capturedSquare = move.capturedSquare;
-  }
-});
-
 const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
   (element) => {
-    activePiece = element;
-    prevSquare = element.parentNode;
-    document.body.appendChild(activePiece);
+    if (!currentTurnMoves[element.id]) return;
+    Object.values(currentTurnMoves[element.id]).forEach(({ square }) => {
+      square.classList.add("droppable");
+    });
   },
-  () => {
-    if (!activePiece) return;
-    if (targetSquare._value) {
-      targetSquare._value.appendChild(activePiece);
-      if (capturedSquare) {
-        capturedSquare.firstElementChild.remove();
-      }
-      const row = getRow(targetSquare._value);
-      const player = getPlayer(activePiece);
-      if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
-        activePiece.classList.add("king");
-      }
-      setTimeout(() => {
-        startTurn(currentPlayer === "p1" ? "p2" : "p1");
-      }, 0);
-    } else {
-      prevSquare.appendChild(activePiece);
+  (element, droppedInTarget, targetSquare) => {
+    Object.values(currentTurnMoves[element.id]).forEach(({ square }) => {
+      square.classList.remove("droppable");
+    });
+    if (!droppedInTarget) return;
+    const { capturedSquare } = currentTurnMoves[element.id][targetSquare.id];
+    if (capturedSquare) {
+      capturedSquare.firstElementChild.remove();
     }
-    Object.assign(activePiece.style, { position: null, pointerEvents: null });
-    activePiece = null;
-    prevSquare = null;
-    hoveredSquare.update(null);
-  },
-  (clientX, clientY) => {
-    hoveredSquare.update(document.elementFromPoint(clientX, clientY));
+    const row = getRow(targetSquare);
+    const player = getPlayer(element);
+    if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
+      element.classList.add("king");
+    }
+    startTurn(currentPlayer === "p1" ? "p2" : "p1");
   }
 );
 
@@ -110,8 +70,11 @@ function startTurn(player) {
   currentPlayer = player;
   const possibleMoves = getPossibleMoves(player);
   currentTurnMoves = Object.fromEntries(
-    possibleMoves.map((move) => [`${move.piece.id}-${move.square.id}`, move])
+    possibleMoves.map((move) => [move.piece.id, {}])
   );
+  possibleMoves.forEach((move) => {
+    currentTurnMoves[move.piece.id][move.square.id] = move;
+  });
   if (player === "p1") {
     const { piece, square } = getRandom(possibleMoves);
     simulateDragAndDrop(
