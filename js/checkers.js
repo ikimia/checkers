@@ -12,6 +12,19 @@ const getRow = (square) => +square.id.substring(1, square.id.indexOf(","));
 const getColumn = (square) => +square.id.substring(square.id.indexOf(",") + 1);
 const getPlayer = (piece) => piece.id.substring(0, 2);
 
+const getPlayerAndMoves = (previousMove) => {
+  if (previousMove?.capturedSquare) {
+    const capturingMovesBySamePiece = getPossibleMoves(currentPlayer)
+      .filter((move) => move.piece.id === previousMove.piece.id)
+      .filter((move) => move.capturedSquare);
+    if (capturingMovesBySamePiece.length) {
+      return [currentPlayer, capturingMovesBySamePiece];
+    }
+  }
+  const nextPlayer = currentPlayer === "p2" ? "p1" : "p2";
+  return [nextPlayer, getPossibleMoves(nextPlayer)];
+};
+
 const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
   (element) => {
     Object.values(currentTurnMoves[element.id] ?? {}).forEach((move) => {
@@ -23,14 +36,14 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
       move.square.classList.remove("droppable");
     });
     if (!droppedInTarget) return;
-    const { capturedSquare } = currentTurnMoves[element.id][targetSquare.id];
-    capturedSquare?.firstElementChild.remove();
+    const move = currentTurnMoves[element.id][targetSquare.id];
+    move.capturedSquare?.firstElementChild.remove();
     const row = getRow(targetSquare);
     const player = getPlayer(element);
     if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
       element.classList.add("king");
     }
-    startTurn(currentPlayer === "p1" ? "p2" : "p1");
+    startTurn(...getPlayerAndMoves(move));
   }
 );
 
@@ -63,9 +76,8 @@ function newPiece(player, i) {
   return piece;
 }
 
-function startTurn(player) {
+function startTurn(player, possibleMoves) {
   currentPlayer = player;
-  const possibleMoves = getPossibleMoves(player);
   currentTurnMoves = {};
   possibleMoves.forEach((move) => {
     currentTurnMoves[move.piece.id] = {};
@@ -88,7 +100,7 @@ function startGame() {
   document.querySelectorAll(".piece").forEach((p) => p.remove());
   forEachSquare(0, 3, (square, i) => square.appendChild(newPiece("p1", i++)));
   forEachSquare(5, 8, (square, i) => square.appendChild(newPiece("p2", i++)));
-  startTurn("p2");
+  startTurn("p2", getPossibleMoves("p2"));
 }
 
 function getPossibleMoves(player) {
