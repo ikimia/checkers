@@ -9,22 +9,14 @@ function dragAndDrop(onPick, onDrop) {
   let dy = 0;
   let element = null;
   let inSimulation = false;
-  let source = null;
   let target = null;
   let lastHovered = null;
 
   const pick = (el, x, y) => {
     element = el;
-    dx = x - el.offsetLeft;
-    dy = y - el.offsetTop;
-    Object.assign(element.style, {
-      position: "absolute",
-      top: `${y - dy}px`,
-      left: `${x - dx}px`,
-      pointerEvents: "none",
-    });
-    source = element.parentNode;
-    document.body.appendChild(element);
+    dx = x;
+    dy = y;
+    element.style.pointerEvents = "none";
     onPick(element);
   };
   const onPointerDown = (e) => {
@@ -34,10 +26,7 @@ function dragAndDrop(onPick, onDrop) {
   };
 
   const moveTo = (x, y) => {
-    Object.assign(element.style, {
-      top: `${y - dy}px`,
-      left: `${x - dx}px`,
-    });
+    element.style.transform = `translate(${x - dx}px, ${y - dy}px)`;
     const hovered = document.elementFromPoint(x, y);
     if (hovered === lastHovered) return;
     lastHovered = hovered;
@@ -54,12 +43,12 @@ function dragAndDrop(onPick, onDrop) {
   });
 
   const drop = () => {
-    const dropIn = target ?? source;
-    dropIn.appendChild(element);
-    Object.assign(element.style, { position: null, pointerEvents: null });
-    target?.classList.remove("target");
-    onDrop(element, dropIn === target, target);
-    source = null;
+    if (target) {
+      target.appendChild(element);
+      target.classList.remove("target");
+    }
+    Object.assign(element.style, { transform: null, pointerEvents: null });
+    onDrop(element, target);
     target = null;
     element = null;
   };

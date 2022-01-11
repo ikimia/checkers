@@ -31,11 +31,11 @@ const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
       move.square.classList.add("droppable");
     });
   },
-  (element, droppedInTarget, targetSquare) => {
+  (element, targetSquare) => {
     Object.values(currentTurnMoves[element.id] ?? {}).forEach((move) => {
       move.square.classList.remove("droppable");
     });
-    if (!droppedInTarget) return;
+    if (!targetSquare) return;
     const move = currentTurnMoves[element.id][targetSquare.id];
     move.capturedSquare?.firstElementChild.remove();
     const row = getRow(targetSquare);
