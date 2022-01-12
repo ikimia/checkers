@@ -1,4 +1,3 @@
-const getXY = ({ clientX, clientY }) => [clientX, clientY];
 const getCenter = (el) => [
   el.offsetLeft + el.offsetWidth / 2 - document.documentElement.scrollLeft,
   el.offsetTop + el.offsetHeight / 2 - document.documentElement.scrollTop,
@@ -22,7 +21,7 @@ function dragAndDrop(onPick, onDrop) {
   const onPointerDown = (e) => {
     if (inSimulation) return;
     e.preventDefault();
-    pick(e.currentTarget, ...getXY(e));
+    pick(e.currentTarget, e.clientX, e.clientY);
   };
 
   const moveTo = (x, y) => {
@@ -39,7 +38,7 @@ function dragAndDrop(onPick, onDrop) {
   document.addEventListener("pointermove", (e) => {
     if (!element || inSimulation) return;
     e.preventDefault();
-    moveTo(...getXY(e));
+    moveTo(e.clientX, e.clientY);
   });
 
   const drop = () => {
