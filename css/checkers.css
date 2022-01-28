@@ -1,3 +1,7 @@
+:root {
+  --vh: calc((var(--window-height) - env(safe-area-inset-bottom)) / 100);
+  --vmin: min(var(--vh), 1vw);
+}
 body {
   margin: 0;
   padding: 0;
@@ -9,7 +13,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: calc(100 * var(--vh));
 }
 .piece {
   width: 80%;
@@ -42,18 +46,10 @@ body {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
-  padding: 0.5vw;
-  gap: 0.5vw;
-  width: 97vw;
-  height: 97vw;
-}
-@media (min-aspect-ratio: 1 / 1) {
-  #board {
-    padding: 0.5vh;
-    gap: 0.5vh;
-    width: 97vh;
-    height: 97vh;
-  }
+  padding: calc(0.5 * var(--vmin));
+  gap: calc(0.5 * var(--vmin));
+  width: calc(97 * var(--vmin));
+  height: calc(97 * var(--vmin));
 }
 .newGame {
   cursor: pointer;
