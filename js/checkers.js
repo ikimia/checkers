@@ -137,4 +137,6 @@ function getPossibleMoves(player) {
 
 startGame();
 
-document.getElementById("newGame").addEventListener("click", startGame);
+const firstSquare = board.firstElementChild;
+firstSquare.classList.add("newGame");
+firstSquare.addEventListener("click", startGame);
