@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="stylesheet" href="css/checkers.css?v=11" />
     <link
@@ -27,8 +27,11 @@
     <title>Checkers</title>
     <script>
       const setWindowHeight = () => {
-        const root = document.documentElement;
-        root.style.setProperty("--window-height", `${window.innerHeight}px`);
+        const root = document.documentElement
+        root.style.setProperty(
+          "--window-height",
+          `${window.innerHeight}px`
+        );
       };
       setWindowHeight();
       window.addEventListener("resize", setWindowHeight);
