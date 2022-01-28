@@ -38,6 +38,7 @@ body {
 }
 #board {
   background-color: white;
+  touch-action: pinch-zoom;
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
