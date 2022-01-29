@@ -1,5 +1,5 @@
 :root {
-  --vh: calc((var(--window-height) - env(safe-area-inset-bottom)) / 100);
+  --vh: calc((var(--window-height) - 2 * env(safe-area-inset-bottom)) / 100);
   --vmin: min(var(--vh), 1vw);
 }
 body {
@@ -13,7 +13,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(100 * var(--vh));
+  height: var(--window-height);
 }
 .piece {
   width: 80%;
