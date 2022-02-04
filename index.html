@@ -27,11 +27,8 @@
     <title>Checkers</title>
     <script>
       const setWindowHeight = () => {
-        const root = document.documentElement
-        root.style.setProperty(
-          "--window-height",
-          `${window.innerHeight}px`
-        );
+        const root = document.documentElement;
+        root.style.setProperty("--window-height", `${window.innerHeight}px`);
       };
       setWindowHeight();
       window.addEventListener("resize", setWindowHeight);
@@ -40,7 +37,7 @@
   </head>
   <body>
     <div id="container">
-      <div id="board"></div>
+        <div id="board"></div>
     </div>
     <script type="module" src="js/checkers.js"></script>
   </body>

@@ -1,7 +1,7 @@
-const getCenter = (el) => [
-  el.offsetLeft + el.offsetWidth / 2 - document.documentElement.scrollLeft,
-  el.offsetTop + el.offsetHeight / 2 - document.documentElement.scrollTop,
-];
+const getCenter = (el) => {
+  const rect = el.getBoundingClientRect();
+  return [rect.left + el.offsetWidth / 2, rect.top + el.offsetHeight / 2];
+};
 
 function dragAndDrop(onPick, onDrop) {
   let dx = 0;
@@ -58,8 +58,9 @@ function dragAndDrop(onPick, onDrop) {
   });
 
   return {
-    assignDragListener(element) {
+    draggable(element) {
       element.addEventListener("pointerdown", onPointerDown);
+      return element;
     },
     simulateDragAndDrop(element, target) {
       inSimulation = true;

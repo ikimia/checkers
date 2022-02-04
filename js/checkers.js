@@ -1,7 +1,6 @@
 import dragAndDrop from "./drag.js";
 
 let currentTurnMoves = null;
-let currentPlayer = null;
 
 const newDiv = (id, className) =>
   Object.assign(document.createElement("div"), { id, className });
@@ -11,39 +10,47 @@ const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const getRow = (square) => +square.id.substring(1, square.id.indexOf(","));
 const getColumn = (square) => +square.id.substring(square.id.indexOf(",") + 1);
 const getPlayer = (piece) => piece.id.substring(0, 2);
+const getPieces = (player) =>
+  Array.from(document.querySelectorAll(`.piece.${player}`));
 
-const getPlayerAndMoves = (previousMove) => {
-  if (previousMove?.capturedSquare) {
-    const capturingMovesBySamePiece = getPossibleMoves(currentPlayer)
-      .filter((move) => move.piece.id === previousMove.piece.id)
-      .filter((move) => move.capturedSquare);
-    if (capturingMovesBySamePiece.length) {
-      return [currentPlayer, capturingMovesBySamePiece];
-    }
-  }
-  const nextPlayer = currentPlayer === "p2" ? "p1" : "p2";
-  return [nextPlayer, getPossibleMoves(nextPlayer)];
-};
+const forEachMoveSquare = (element, fn) =>
+  Object.values(currentTurnMoves[element.id]).forEach((m) => {
+    fn(m.square.classList);
+  });
 
-const { assignDragListener, simulateDragAndDrop } = dragAndDrop(
+const { draggable, simulateDragAndDrop } = dragAndDrop(
   (element) => {
-    Object.values(currentTurnMoves[element.id] ?? {}).forEach((move) => {
-      move.square.classList.add("droppable");
-    });
+    forEachMoveSquare(element, (cl) => cl.add("droppable"));
   },
   (element, targetSquare) => {
-    Object.values(currentTurnMoves[element.id] ?? {}).forEach((move) => {
-      move.square.classList.remove("droppable");
-    });
+    forEachMoveSquare(element, (cl) => cl.remove("droppable"));
     if (!targetSquare) return;
-    const move = currentTurnMoves[element.id][targetSquare.id];
-    move.capturedSquare?.firstElementChild.remove();
     const row = getRow(targetSquare);
     const player = getPlayer(element);
     if ((player === "p1" && row === 7) || (player === "p2" && row === 0)) {
       element.classList.add("king");
     }
-    startTurn(...getPlayerAndMoves(move));
+    const move = currentTurnMoves[element.id][targetSquare.id];
+    if (move.capturedSquare) {
+      move.capturedSquare.firstElementChild.remove();
+      const multiCaptureMoves = getPossibleMoves(move.piece).filter(
+        (m) => m.capturedSquare
+      );
+      if (multiCaptureMoves.length) {
+        return startTurn(multiCaptureMoves);
+      }
+    }
+    const nextPlayer = player === "p2" ? "p1" : "p2";
+    const nextPlayerPieces = getPieces(nextPlayer);
+    if (nextPlayerPieces.length === 0) {
+      const message = player === "p1" ? "The compter wins!" : "You win!";
+      return startGame(`GAME OVER\n${message}`);
+    }
+    const possibleMoves = nextPlayerPieces.flatMap(getPossibleMoves);
+    if (possibleMoves.length === 0) {
+      return startGame("No possible moves");
+    }
+    startTurn(possibleMoves);
   }
 );
 
@@ -70,22 +77,14 @@ function forEachSquare(fromRow, toRow, fn) {
   }
 }
 
-function newPiece(player, i) {
-  const piece = newDiv(`${player}-${i}`, `piece ${player}`);
-  assignDragListener(piece);
-  return piece;
-}
+const newPiece = (player, i) => newDiv(`${player}-${i}`, `piece ${player}`);
 
-function startTurn(player, possibleMoves) {
-  currentPlayer = player;
-  currentTurnMoves = {};
-  possibleMoves.forEach((move) => {
-    currentTurnMoves[move.piece.id] = {};
-  });
+function startTurn(possibleMoves) {
+  currentTurnMoves = new Proxy({}, { get: (t, p) => t[p] ?? (t[p] = {}) });
   possibleMoves.forEach((move) => {
     currentTurnMoves[move.piece.id][move.square.id] = move;
   });
-  if (player === "p1") {
+  if (possibleMoves[0] && getPlayer(possibleMoves[0].piece) === "p1") {
     const capturingMoves = possibleMoves.filter((move) => move.capturedSquare);
     const randomMove = capturingMoves.length
       ? getRandom(capturingMoves)
@@ -96,40 +95,41 @@ function startTurn(player, possibleMoves) {
   }
 }
 
-function startGame() {
-  document.querySelectorAll(".piece").forEach((p) => p.remove());
+function startGame(message) {
+  if (message) alert(message);
+  [...getPieces("p1"), ...getPieces("p2")].forEach((p) => p.remove());
   forEachSquare(0, 3, (square, i) => square.appendChild(newPiece("p1", i++)));
-  forEachSquare(5, 8, (square, i) => square.appendChild(newPiece("p2", i++)));
-  startTurn("p2", getPossibleMoves("p2"));
+  forEachSquare(5, 8, (square, i) =>
+    square.appendChild(draggable(newPiece("p2", i++)))
+  );
+  startTurn(getPieces("p2").flatMap(getPossibleMoves));
 }
 
-function getPossibleMoves(player) {
+function getPossibleMoves(piece) {
   const moves = [];
-  document.querySelectorAll(`.piece.${player}`).forEach((piece) => {
-    const p = getPlayer(piece);
-    const row = getRow(piece.parentElement);
-    const column = getColumn(piece.parentElement);
-    const rdirs = [p === "p1" ? 1 : -1];
-    if (piece.classList.contains("king")) rdirs.push(rdirs[0] * -1);
-    rdirs.forEach((rdir) => {
-      [-1, +1].forEach((cdir) => {
-        const nextSquare = getSquare(row + rdir, column + cdir);
-        if (!nextSquare) return;
-        if (!nextSquare.childElementCount) {
-          moves.push({ piece, square: nextSquare });
-        }
-        const nextPiece = nextSquare.firstElementChild;
-        if (!nextPiece || getPlayer(nextPiece) === p) return;
-        const capturingSquare = getSquare(row + rdir * 2, column + cdir * 2);
-        if (!capturingSquare) return;
-        if (!capturingSquare.childElementCount) {
-          moves.push({
-            piece,
-            square: capturingSquare,
-            capturedSquare: nextSquare,
-          });
-        }
-      });
+  const p = getPlayer(piece);
+  const row = getRow(piece.parentElement);
+  const column = getColumn(piece.parentElement);
+  const rdirs = [p === "p1" ? 1 : -1];
+  if (piece.classList.contains("king")) rdirs.push(rdirs[0] * -1);
+  rdirs.forEach((rdir) => {
+    [-1, +1].forEach((cdir) => {
+      const nextSquare = getSquare(row + rdir, column + cdir);
+      if (!nextSquare) return;
+      if (!nextSquare.childElementCount) {
+        moves.push({ piece, square: nextSquare });
+      }
+      const nextPiece = nextSquare.firstElementChild;
+      if (!nextPiece || getPlayer(nextPiece) === p) return;
+      const capturingSquare = getSquare(row + rdir * 2, column + cdir * 2);
+      if (!capturingSquare) return;
+      if (!capturingSquare.childElementCount) {
+        moves.push({
+          piece,
+          square: capturingSquare,
+          capturedSquare: nextSquare,
+        });
+      }
     });
   });
   return moves;
