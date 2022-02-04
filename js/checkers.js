@@ -139,4 +139,4 @@ startGame();
 
 const firstSquare = board.firstElementChild;
 firstSquare.classList.add("newGame");
-firstSquare.addEventListener("click", startGame);
+firstSquare.addEventListener("click", () => startGame());
